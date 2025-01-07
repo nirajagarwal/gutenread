@@ -3,4 +3,4 @@ services:
     name: gutenread
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $RENDER_PORT --workers 1 --proxy-headers --forwarded-allow-ips='*'
+    startCommand: python -m hypercorn app:app --bind 0.0.0.0:$RENDER_PORT --workers 1
