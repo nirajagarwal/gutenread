@@ -106,20 +106,15 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='apple-touch-icon.png') }}" 
-                     alt="GutenRead Logo" 
-                     class="me-2"
-                     width="40" 
-                     height="40">
-                GutenRead
+            <a class="navbar-brand d-flex align-items-center fw-bold" href="/" style="letter-spacing: 2px;">
+                GUTENREAD
             </a>
             
             <!-- Search form -->
-            <form class="navbar-search d-flex">
+            <form id="searchForm" class="navbar-search d-flex">
                 <div class="input-group">
                     <input type="text" id="searchInput" class="form-control" placeholder="Search books...">
-                    <button class="btn btn-outline-secondary" type="button" onclick="searchAll()">
+                    <button class="btn btn-outline-secondary" type="submit">
                         <i class="bi bi-search"></i>
                     </button>
                 </div>
@@ -150,23 +145,23 @@
         </div>
 
         <!-- Results -->
-        <div id="openLibraryResults" class="results-section">
-            <h2>OpenLibrary Results</h2>
+        <div id="openLibraryResults" class="results-section" style="display: none;">
+            <h2 style="display: none;">OpenLibrary Results</h2>
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4"></div>
         </div>
 
-        <div id="gutenbergResults" class="results-section">
-            <h2>Project Gutenberg Results</h2>
+        <div id="gutenbergResults" class="results-section" style="display: none;">
+            <h2 style="display: none;">Project Gutenberg Results</h2>
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4"></div>
         </div>
 
-        <div id="googleResults" class="results-section">
-            <h2>Google Books Results</h2>
+        <div id="googleResults" class="results-section" style="display: none;">
+            <h2 style="display: none;">Google Books Results</h2>
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4"></div>
         </div>
 
-        <div id="doabResults" class="results-section">
-            <h2>DOAB Results</h2>
+        <div id="doabResults" class="results-section" style="display: none;">
+            <h2 style="display: none;">DOAB Results</h2>
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4"></div>
         </div>
     </div>
@@ -174,50 +169,87 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Single event handler for form submission
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await searchAll();
+        });
+
         async function searchAll() {
             const query = document.getElementById('searchInput').value;
             if (!query.trim()) return;
 
+            // Show loading indicator
             const loading = document.getElementById('loading');
-            const openLibraryDiv = document.querySelector('#openLibraryResults .row');
-            const gutenbergDiv = document.querySelector('#gutenbergResults .row');
-            const googleDiv = document.querySelector('#googleResults .row');
-            const doabDiv = document.querySelector('#doabResults .row');
-            
             loading.classList.remove('d-none');
-            openLibraryDiv.innerHTML = '';
-            gutenbergDiv.innerHTML = '';
-            googleDiv.innerHTML = '';
-            doabDiv.innerHTML = '';
 
+            // Hide all sections and titles initially
+            const sections = ['openLibrary', 'gutenberg', 'google', 'doab'];
+            sections.forEach(section => {
+                const sectionDiv = document.getElementById(`${section}Results`);
+                sectionDiv.style.display = 'none';
+                const titleElement = sectionDiv.querySelector('h2');
+                titleElement.style.display = 'none';
+                // Reset section titles to default
+                if (section === 'openLibrary') {
+                    titleElement.textContent = 'OpenLibrary Results';
+                } else if (section === 'gutenberg') {
+                    titleElement.textContent = 'Project Gutenberg Results';
+                } else if (section === 'google') {
+                    titleElement.textContent = 'Google Books Results';
+                } else if (section === 'doab') {
+                    titleElement.textContent = 'DOAB Results';
+                }
+            });
+            
             try {
-                // Search all APIs in parallel (without Wikisource)
-                const [openLibraryResults, gutenbergResults, googleResults, doabResults] = await Promise.all([
-                    fetch(`/search/openlibrary/${encodeURIComponent(query)}`).then(r => r.json()),
-                    fetch(`/search/gutenberg/${encodeURIComponent(query)}`).then(r => r.json()),
-                    fetch(`/search/google/${encodeURIComponent(query)}`).then(r => r.json()),
-                    fetch(`/search/doab/${encodeURIComponent(query)}`).then(r => r.json())
-                ]);
+                // Clear previous results
+                sections.forEach(section => {
+                    document.querySelector(`#${section}Results .row`).innerHTML = '';
+                });
 
-                // Display results from each source (without Wikisource)
-                if (!openLibraryResults.error) {
-                    displayOpenLibraryResults(openLibraryResults);
-                }
-                
-                if (!gutenbergResults.error) {
-                    displayGutenbergResults(gutenbergResults);
-                }
-                
-                if (!googleResults.error) {
-                    displayGoogleResults(googleResults);
+                // OpenLibrary
+                const openLibraryUrl = `/search/openlibrary/${encodeURIComponent(query)}`;
+                const olResponse = await fetch(openLibraryUrl);
+                const olData = await olResponse.json();
+                if (olData && !olData.error && olData.books && olData.books.length > 0) {
+                    document.getElementById('openLibraryResults').style.display = 'block';
+                    document.querySelector('#openLibraryResults h2').style.display = 'block';
+                    displayOpenLibraryResults(olData);
                 }
 
-                if (!doabResults.error) {
-                    displayDoabResults(doabResults);
+                // Gutenberg
+                const gutenbergUrl = `/search/gutenberg/${encodeURIComponent(query)}`;
+                const gbResponse = await fetch(gutenbergUrl);
+                const gbData = await gbResponse.json();
+                if (gbData && !gbData.error && gbData.results && gbData.results.length > 0) {
+                    document.getElementById('gutenbergResults').style.display = 'block';
+                    document.querySelector('#gutenbergResults h2').style.display = 'block';
+                    displayGutenbergResults(gbData);
+                }
+
+                // Google Books
+                const googleUrl = `/search/google/${encodeURIComponent(query)}`;
+                const googleResponse = await fetch(googleUrl);
+                const googleData = await googleResponse.json();
+                if (googleData && !googleData.error && googleData.books && googleData.books.length > 0) {
+                    document.getElementById('googleResults').style.display = 'block';
+                    document.querySelector('#googleResults h2').style.display = 'block';
+                    displayGoogleResults(googleData);
+                }
+
+                // DOAB
+                const doabUrl = `/search/doab/${encodeURIComponent(query)}`;
+                const doabResponse = await fetch(doabUrl);
+                const doabData = await doabResponse.json();
+                if (doabData && !doabData.error && doabData.books && doabData.books.length > 0) {
+                    document.getElementById('doabResults').style.display = 'block';
+                    document.querySelector('#doabResults h2').style.display = 'block';
+                    displayDoabResults(doabData);
                 }
 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Search error:', error);
             } finally {
                 loading.classList.add('d-none');
             }
@@ -225,7 +257,12 @@
 
         function displayOpenLibraryResults(data) {
             const resultsDiv = document.querySelector('#openLibraryResults .row');
-            resultsDiv.innerHTML = data.books.slice(0, 8).map(book => `
+            if (!data.books || !data.books.length) {
+                resultsDiv.innerHTML = '<div class="col"><p>No results found</p></div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = data.books.map(book => `
                 <div class="col">
                     <div class="card book-card shadow-sm">
                         <a href="https://openlibrary.org${book.key}" target="_blank">
@@ -246,9 +283,7 @@
                         <div class="card-footer">
                             <a href="https://openlibrary.org${book.key}" 
                                class="btn btn-sm btn-outline-primary btn-action" 
-                               target="_blank">
-                                ${book.availability?.available_to_borrow ? 'Borrow' : 'Read'}
-                            </a>
+                               target="_blank">Read</a>
                         </div>
                     </div>
                 </div>
@@ -257,18 +292,18 @@
 
         function displayGutenbergResults(data) {
             const resultsDiv = document.querySelector('#gutenbergResults .row');
-            resultsDiv.innerHTML = (data.results || []).map(book => `
+            if (!data.results || !data.results.length) {
+                resultsDiv.innerHTML = '<div class="col"><p>No results found</p></div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = data.results.map(book => `
                 <div class="col">
                     <div class="card book-card shadow-sm">
                         <a href="${book.formats['text/html'] || '#'}" target="_blank">
                             ${book.formats['image/jpeg'] 
-                                ? `<img src="${book.formats['image/jpeg']}" 
-                                     class="card-img-top" 
-                                     alt="${book.title}"
-                                     onerror="this.onerror=null; this.src='https://placehold.co/400x600?text=No+Cover'">`
-                                : `<div class="placeholder-img">
-                                     <span class="text-muted">No Cover</span>
-                                   </div>`
+                                ? `<img src="${book.formats['image/jpeg']}" class="card-img-top" alt="${book.title}">`
+                                : `<div class="placeholder-img"><span class="text-muted">No Cover</span></div>`
                             }
                         </a>
                         <div class="card-body">
@@ -332,11 +367,11 @@
                 <div class="col">
                     <div class="card book-card shadow-sm">
                         <a href="${book.url}" target="_blank">
-                            ${book.isbn 
-                                ? `<img src="https://covers.openlibrary.org/b/isbn/${book.isbn}-M.jpg" 
+                            ${book.cover_url 
+                                ? `<img src="${book.cover_url}" 
                                      class="card-img-top" 
                                      alt="${book.title}"
-                                     onerror="this.onerror=null; this.src='https://books.google.com/books/content?vid=isbn${book.isbn}&printsec=frontcover&img=1&zoom=1'">`
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'placeholder-img\'><span class=\'text-muted\'>Academic Book</span></div>';">`
                                 : `<div class="placeholder-img">
                                      <span class="text-muted">Academic Book</span>
                                    </div>`
@@ -346,19 +381,21 @@
                             <h5 class="card-title text-truncate" title="${book.title}">${book.title}</h5>
                             <p class="card-text">
                                 <small class="text-muted">
-                                    ${book.authors.join(', ') || 'Unknown Author'}
+                                    ${book.authors ? book.authors.join(', ') : 'Unknown Author'}
                                 </small>
                             </p>
-                            <p class="card-text">
-                                <small class="text-muted">${book.extract || ''}</small>
-                            </p>
+                            ${book.abstract ? `
+                                <p class="card-text">
+                                    <small class="text-muted">${book.abstract.slice(0, 100)}${book.abstract.length > 100 ? '...' : ''}</small>
+                                </p>
+                            ` : ''}
                         </div>
                         <div class="card-footer">
                             <a href="${book.url}" 
                                class="btn btn-sm btn-outline-primary btn-action" 
                                target="_blank">Read</a>
-                            ${book.formats['text/html'] ? 
-                                `<a href="${book.formats['text/html']}" 
+                            ${book.doi ? 
+                                `<a href="https://doi.org/${book.doi}" 
                                     class="btn btn-sm btn-outline-secondary btn-action" 
                                     target="_blank">DOI</a>` : ''}
                         </div>
@@ -375,17 +412,21 @@
             }
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTrendingBooks();
-        });
-
         async function loadTrendingBooks() {
             const loading = document.getElementById('loading');
             loading.classList.remove('d-none');
 
+            // Hide all sections and titles initially
+            const sections = ['openLibrary', 'gutenberg', 'google', 'doab'];
+            sections.forEach(section => {
+                const sectionDiv = document.getElementById(`${section}Results`);
+                sectionDiv.style.display = 'none';
+                const titleElement = sectionDiv.querySelector('h2');
+                titleElement.style.display = 'none';
+            });
+
             try {
-                console.log('Loading trending books...');
-                // Fetch trending books from OpenLibrary and Gutenberg only
+                // Fetch trending data
                 const [openLibraryTrending, gutenbergTrending] = await Promise.all([
                     fetch('/trending/openlibrary')
                         .then(r => r.json())
@@ -401,27 +442,25 @@
                         })
                 ]);
 
-                console.log('Trending responses received:', {
-                    openLibrary: openLibraryTrending,
-                    gutenberg: gutenbergTrending
-                });
-
-                // Update section titles to show these are trending books
-                document.querySelector('#openLibraryResults h2').textContent = 'Trending on OpenLibrary';
-                document.querySelector('#gutenbergResults h2').textContent = 'Popular on Project Gutenberg';
-                
-                // Hide Google Books and DOAB sections for trending view
-                document.getElementById('googleResults').style.display = 'none';
-                document.getElementById('doabResults').style.display = 'none';
-
-                // Display results
-                if (!openLibraryTrending.error) {
+                // Display OpenLibrary results if valid
+                if (!openLibraryTrending.error && openLibraryTrending.books && openLibraryTrending.books.length > 0) {
+                    document.getElementById('openLibraryResults').style.display = 'block';
+                    document.querySelector('#openLibraryResults h2').style.display = 'block';
+                    document.querySelector('#openLibraryResults h2').textContent = 'Trending on OpenLibrary';
                     displayOpenLibraryResults(openLibraryTrending);
                 }
                 
-                if (!gutenbergTrending.error) {
+                // Display Gutenberg results if valid
+                if (!gutenbergTrending.error && gutenbergTrending.results && gutenbergTrending.results.length > 0) {
+                    document.getElementById('gutenbergResults').style.display = 'block';
+                    document.querySelector('#gutenbergResults h2').style.display = 'block';
+                    document.querySelector('#gutenbergResults h2').textContent = 'Popular on Project Gutenberg';
                     displayGutenbergResults(gutenbergTrending);
                 }
+
+                // Keep Google Books and DOAB sections hidden for trending view
+                document.getElementById('googleResults').style.display = 'none';
+                document.getElementById('doabResults').style.display = 'none';
 
             } catch (error) {
                 console.error('Error loading trending books:', error);
@@ -430,22 +469,19 @@
             }
         }
 
-        // Update searchAll to show all sections again
-        async function searchAll() {
-            const query = document.getElementById('searchInput').value;
-            if (!query.trim()) return;
+        // Load trending books when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTrendingBooks();
+        });
 
-            // Show all sections for search
-            document.getElementById('googleResults').style.display = 'block';
-            document.getElementById('doabResults').style.display = 'block';
-            
-            // Restore original section titles
-            document.querySelector('#openLibraryResults h2').textContent = 'OpenLibrary Results';
-            document.querySelector('#gutenbergResults h2').textContent = 'Project Gutenberg Results';
-            document.querySelector('#doabResults h2').textContent = 'DOAB Results';
-            
-            // ... rest of the existing searchAll code ...
-        }
+        // For debugging, add a direct call when pressing Enter in the search input
+        document.getElementById('searchInput').addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter') {
+                console.log('Enter pressed in search input');
+                e.preventDefault();
+                await searchAll();
+            }
+        });
     </script>
 </body>
 </html> 

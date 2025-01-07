@@ -24,7 +24,7 @@ A web application for searching and discovering books across multiple open-acces
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/gutenread.git
+   git clone https://github.com/nirajagarwal/gutenread.git
    cd gutenread
    ```
 
@@ -69,5 +69,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - OpenLibrary API
-- Project Gutenberg API
-- Bootstrap Team
+- Project Gutenberg and GutenDex API
+- Directory of Open Access Books (DOAB)
