@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: gutenread
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips='*'
