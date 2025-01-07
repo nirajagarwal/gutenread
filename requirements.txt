@@ -1,2 +1,5 @@
-quart==0.19.4
-hypercorn==0.15.0 
+uvicorn
+quart>=0.19.4
+aiohttp
+python-dotenv
+hypercorn>=0.15.0
